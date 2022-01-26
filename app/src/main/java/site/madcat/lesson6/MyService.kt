@@ -35,6 +35,7 @@ class MyService : Service() {
         }.start()
         return super.onStartCommand(intent, flags, startId)
     }
+
     override fun onBind(intent: Intent): IBinder {
         Log.d(TAG, "onBind() called with: intent = $intent")
        return binder

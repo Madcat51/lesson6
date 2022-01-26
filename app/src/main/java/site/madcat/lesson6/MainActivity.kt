@@ -1,10 +1,8 @@
 package site.madcat.lesson6
 
-import android.content.ComponentName
-import android.content.Intent
-import android.content.IntentFilter
-import android.content.ServiceConnection
+import android.content.*
 import android.net.ConnectivityManager
+import android.net.NetworkInfo
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -14,15 +12,29 @@ import android.util.Log
 import site.madcat.lesson6.databinding.ActivityMainBinding
 import kotlin.concurrent.thread
 
+
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private var myReceiver=MyReceiver()
     private val uiHandler: Handler by lazy { Handler(mainLooper) }
     private val handlerThread: HandlerThread=HandlerThread("HideAppThread").apply { start() }
     private val workerHandler: Handler by lazy { Handler(handlerThread.looper) }
-
     private val TAG="@@@@"
 
+
+    private val myReceiver: BroadcastReceiver=object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.getAction().equals(ConnectivityManager.CONNECTIVITY_ACTION)) {
+                val networkInfo: NetworkInfo?=
+                    intent!!.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO)
+                if (networkInfo!!.isConnected) {
+                    Log.d("Network_State", "Network status - ok")
+                } else {
+                    Log.d("Network_State", "Network status - error")
+                }
+                workThread()
+            }
+        }
+    }
     private val connection=object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             Log.d(TAG, "onServiceConnected() called with: name = $name, binder = $binder")
@@ -33,7 +45,6 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceDisconnected(name: ComponentName?) {
             Log.d(TAG, "onServiceDisconnected() called with: name = $name")
         }
-
     }
 
 
@@ -41,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding=ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        workThread()
+        //   workThread()
         Services()
     }
 
@@ -66,30 +77,13 @@ class MainActivity : AppCompatActivity() {
 
     fun workThread() {
         workerHandler.post {
-            var i=1
-            while (i < 10000) {
-                if (binding.checkBox.isChecked) {
-                    i=i + i * 2
-                    Thread.sleep(1000)
-                    uiHandler.post {
-                        binding.textView.text=i.toString()
-                    }
-                }
-            }
+            val serviceIntent=Intent(this, MyService::class.java)
+                bindService(serviceIntent, connection, BIND_AUTO_CREATE)
         }
     }
 
     fun Services() {
         val serviceIntent=Intent(this, MyService::class.java)
-
-        binding.startButton.setOnClickListener {
-            serviceIntent.putExtra("message", "ololo")
-            startService(serviceIntent)
-        }
-
-        binding.stopButton.setOnClickListener {
-            stopService(serviceIntent)
-        }
 
         binding.bindButton.setOnClickListener {
             bindService(serviceIntent, connection, BIND_AUTO_CREATE)
