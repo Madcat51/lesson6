@@ -2,7 +2,9 @@ package site.madcat.lesson6
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.ServiceConnection
+import android.net.ConnectivityManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.Handler
@@ -14,12 +16,12 @@ import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
+    private var myReceiver=MyReceiver()
     private val uiHandler: Handler by lazy { Handler(mainLooper) }
     private val handlerThread: HandlerThread=HandlerThread("HideAppThread").apply { start() }
     private val workerHandler: Handler by lazy { Handler(handlerThread.looper) }
 
-    private val TAG = "@@@@"
+    private val TAG="@@@@"
 
     private val connection=object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -34,12 +36,26 @@ class MainActivity : AppCompatActivity() {
 
     }
 
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding=ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         workThread()
+        Services()
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        val intentFilter=IntentFilter()
+        intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+        registerReceiver(myReceiver, intentFilter)
+    }
+
+    override fun onPause() {
+        super.onPause();
+        unregisterReceiver(myReceiver);
     }
 
     override fun onDestroy() {
